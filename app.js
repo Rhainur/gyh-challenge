@@ -9,6 +9,7 @@ var connection = mysql.createConnection({
 });
 
 var config = {
+  durationLength: 90, // How many days into the future to check booking availability
   /*
   Store the working hours for the cleaning sessions. 
   */
@@ -22,12 +23,11 @@ var config = {
 function createFullAvailabilityObject(booking_duration){
   var result = {};
 
-  var currentDate = new Date();
-  var startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  var endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
+  var durationStart = new Date();
+  var durationEnd = new Date(durationStart.getFullYear(), durationStart.getMonth(), config.durationLength, 23, 59, 59);
 
-  var i = startOfMonth;
-  while(i < endOfMonth){
+  var i = durationStart;
+  while(i < durationEnd){
     dateKey = i.toISOString().substr(0, 10);
     result[dateKey] = [];
     endOfWork = new Date(i.getTime()).setHours(config.workStopHour)
@@ -45,9 +45,8 @@ function createFullAvailabilityObject(booking_duration){
 }
 
 function filterBookingConflicts(availableTimings, bookings){
-  var currentDate = new Date();
-  var startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  var endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
+  var durationStart = new Date();
+  var durationEnd = new Date(durationStart.getFullYear(), durationStart.getMonth(), config.durationLength, 23, 59, 59);
 
   for(var i=0; i < bookings.length; i++){
     var b = bookings[i];
@@ -59,13 +58,13 @@ function filterBookingConflicts(availableTimings, bookings){
     // and increase the date if we're dealing with
     // a recurring booking from earlier
     if(b.recurring_days > 0){
-      while(d < startOfMonth){
+      while(d < durationStart){
         d.setDate(d.getDate() + b.recurring_days);
       }
     }
 
     // Start the check!
-    while(d < endOfMonth){
+    while(d < durationEnd){
 
       dateKey = d.toISOString().substr(0, 10);
       timings = availableTimings[dateKey]

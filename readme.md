@@ -22,5 +22,8 @@ requirements of the challenge.
 Availability checking works by first generating a list of all possible start times for the
 session while ignoring conflicts i.e merely looking at working hours and session duration,
 and then pulling booking information from the database and using it to eliminate times, and
-finally returning the filtered timings.
+finally returning the filtered timings. Currently, the system checks availability up to 90
+days into the future, but this could easily be tweaked via the config, and an inspection of
+the code will show that we can just as easily accept an end date via the API parameters and
+use that as our upper limit.
 
