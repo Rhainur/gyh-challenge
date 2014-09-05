@@ -1,12 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="gyhApp">
   <head>
     <meta charset="utf-8">
     <title>GYH - Booking App</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0-rc.0/angular.min.js"></script>
     <script src="script.js"></script>
   </head>
   <body>
     <h1>GYH - Booking App</h1>
+    <div ng-controller="BookingController">
+      <label>Booking Duration: </label>
+      <input type="number" min="1" step="1" value="1" ng-model="bookingDuration" style="width: 50px" /> hours
+      <br />
+      <label>Repeating every: </label>
+      <input type="number" min="0" step="1" value="1" ng-model="bookingRecurrence" style="width: 50px" /> days
+      <br />
+      <button ng-click="checkAvailability()">Get Availability</button>
+      <hr />
+      <div>
+        <ul>
+          <li ng-repeat="day in availableTimings">
+            <div>{{ day.date }}</div>
+            <div>
+              <button ng-repeat="timing in day.timings">{{ displayFriendlyTime(timing) }}</button>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
   </body>
 </html>
