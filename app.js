@@ -55,7 +55,7 @@ connection.connect(function(err){
 var tableSetupQuery = "CREATE TABLE IF NOT EXISTS `bookings` ( \
   id INT NOT NULL AUTO_INCREMENT, \
   start DATETIME NOT NULL, \
-  end DATETIME NOT NULL, \
+  duration TINYINT NOT NULL, \
   recurring_days TINYINT UNSIGNED DEFAULT 0, \
   active BOOLEAN DEFAULT true, \
   PRIMARY KEY ( id ) \
@@ -81,7 +81,6 @@ router.get('/availability/:duration', function(req, res){
     if(err){
       res.json(null);
     }else{
-
       var availableTimings = createFullAvailabilityObject(booking_duration);
             
       res.json({'availableTimings': availableTimings});
