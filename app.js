@@ -17,13 +17,19 @@ var config = {
   workStopHour: 17 // Any booking must end by this hour
 };
 
-/*  Returns an object representing all possible timings 
+/*  
+    function createFullAvailabilityObject
+    Takes the duration of the requested booking
+
+    Returns an object representing all possible timings 
     for the current month where a booking could potentially
     start. Booking length is stored in session_duration
     Output is an object with the keys being
     date strings of the form YYYY-MM-DD and the values
     being an object with a human readable date string
-    and an array of available timings
+    and an array of available timings.
+
+    These timings will be filtered for conflicts later
 */
 function createFullAvailabilityObject(booking_duration){
   var result = {};
@@ -53,7 +59,20 @@ function createFullAvailabilityObject(booking_duration){
   return result;
 }
 
-function filterBookingConflicts(availableTimings, bookings){
+
+/*
+  function filterBookingConflicts
+  Takes a list of available timings, and a list of bookings
+  and removes all timings that conflict with the list of bookings.
+  The requested_booking_recurrence is used in case the user wants
+  to book repeated sessions, where we will need to remove all
+  timings that can't be repeated every X days.
+
+  Returns a list of available timings with the conflicting timings removed.
+*/
+
+function filterBookingConflicts(availableTimings, bookings, requested_booking_recurrence){
+  console.log("Recur", requested_booking_recurrence);
   var durationStart = new Date(); durationStart.setHours(0,0,0,0);
   var durationEnd = new Date(durationStart.getFullYear(), durationStart.getMonth(), config.durationLength, 23, 59, 59);
 
@@ -72,7 +91,7 @@ function filterBookingConflicts(availableTimings, bookings){
       }
     }
 
-    // Start the check!
+    // Start the loop!
     while(d < durationEnd){
 
       dateKey = d.toISOString().substr(0, 10);
@@ -82,28 +101,79 @@ function filterBookingConflicts(availableTimings, bookings){
       }
 
       if( timings ){
-        // Looks like we have potential bookings
-        // on this day. Better filter them!
+        // Check all the available timings to see
+        // if any of them conflict with this booking
         bookingStart = d;
         bookingEnd = new Date(d.getTime());
         bookingEnd.setHours(bookingEnd.getHours() + b.duration);
         for(var j=0; j < timings.length; j++){
           if(timings[j] >= bookingStart && timings[j] <= bookingEnd){
-            // Booking conflict. Remove the item from the list
-            // of available timings
-            timings.splice(j, 1);
+            // Booking conflict. 
+            availableTimings = removeAvailableTimeWithRecurrence(availableTimings, timings[j], requested_booking_recurrence);
           }
         }
       }
 
       if(b.recurring_days > 0){
+        // This booking that we pulled from the database
+        // has been set to repeat. We have to check
+        // all the repeating days and remove conflicts
+        // from there as well
         d.setDate(d.getDate() + b.recurring_days);
       }else{
         // This booking does not recur. Exit the loop
         break;
       }
     }
+  }
+  return availableTimings;
+}
 
+/*
+  function removeAvailableTimeWithRecurrence
+  Takes a list of available timings, a timing to remove, and whether
+  the requested booking will recur. If a time is not available on day X
+  and the user has requested a session every 3 days, we will need to
+  remove the same time on day X - 3, X - 6, X - 9, etc
+*/
+
+function removeAvailableTimeWithRecurrence(availableTimings, timingToRemove, booking_recurrence){
+  var durationStart = new Date(); durationStart.setHours(0,0,0,0);
+
+  var d = new Date(timingToRemove.getTime());
+  // If the requested booking is going to recur, we
+  // have to remove this time slot from earlier days
+  // on which the booking might occur.
+  if(booking_recurrence > 0){
+    // Step backwards as close to the duration start as possible
+    while(d >= durationStart){
+      d.setDate(d.getDate() - booking_recurrence);
+    }
+
+    if(d < durationStart){
+      d.setDate(d.getDate() + booking_recurrence);
+    }
+  }
+
+
+  // If the booking does not recur, then d = timingToRemove
+  // and the loop will only execute once
+  while(d <= timingToRemove){
+    dateKey = d.toISOString().substr(0, 10);
+    timings = null;
+    if(availableTimings[dateKey]){
+      timings = availableTimings[dateKey].timings;
+    }
+
+    if( timings ){
+      for(var j=0; j < timings.length; j++){
+        if((timings[j].getHours() === timingToRemove.getHours()) && (timings[j].getMinutes() === timingToRemove.getMinutes())){
+          // Remove the item from the list of available timings
+          timings.splice(j, 1);
+        }
+      }
+    }      
+    d.setDate(d.getDate() + booking_recurrence);
   }
 
   return availableTimings;
@@ -141,17 +211,24 @@ var router = express.Router();
 app.use(express.static(__dirname + '/public'));
 
 // Routes
-router.get('/availability/:duration', function(req, res){
+router.get('/availability/:duration/:recurrence', function(req, res){
   var booking_duration = parseInt(req.params.duration);
   // Enforce minimum duration of 1 hour
   if(booking_duration === NaN || booking_duration < 1){
     booking_duration = 1;
   }
+
+  var booking_recurrence = parseInt(req.params.recurrence);
+  // Enforce default recurrence of never
+  if(booking_recurrence === NaN || booking_recurrence < 0){
+    booking_recurrence = 0;
+  }
+
   connection.query("SELECT * FROM bookings WHERE active = true;", function(err, rows, fields){
     if(err){
       res.json(null);
     }else{
-      var availableTimings = filterBookingConflicts(createFullAvailabilityObject(booking_duration), rows);
+      var availableTimings = filterBookingConflicts(createFullAvailabilityObject(booking_duration), rows, booking_recurrence);
             
       res.json({'availableTimings': availableTimings});
     }
