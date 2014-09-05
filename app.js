@@ -23,16 +23,17 @@ function createFullAvailabilityObject(booking_duration){
   var result = {};
 
   var currentDate = new Date();
-  var startOfMonth = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), 1));
-  var endOfMonth = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59));
+  var startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  var endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
 
   var i = startOfMonth;
   while(i < endOfMonth){
     dateKey = i.toISOString().substr(0, 10);
     result[dateKey] = [];
+    endOfWork = new Date(i.getTime()).setHours(config.workStopHour)
     
     i.setHours(config.workStartHour);
-    while((i.getHours() + booking_duration) <= config.workStopHour){
+    while((endOfWork - i) >= (60 * 60 * 1000 * booking_duration)){
       result[dateKey].push(new Date(i.getTime()));
       i.setMinutes(i.getMinutes() + 30);
     }
@@ -41,6 +42,60 @@ function createFullAvailabilityObject(booking_duration){
   }
 
   return result;
+}
+
+function filterBookingConflicts(availableTimings, bookings){
+  var currentDate = new Date();
+  var startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  var endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
+
+  for(var i=0; i < bookings.length; i++){
+    var b = bookings[i];
+    // We're going to make sure any dates in our timing list
+    // that conflict with this booking are removed
+    var d = new Date(b.start.getTime());
+
+    // Make sure we're operating within our month
+    // and increase the date if we're dealing with
+    // a recurring booking from earlier
+    if(b.recurring_days > 0){
+      while(d < startOfMonth){
+        d.setDate(d.getDate() + b.recurring_days);
+      }
+    }
+
+    // Start the check!
+    while(d < endOfMonth){
+
+      dateKey = d.toISOString().substr(0, 10);
+      timings = availableTimings[dateKey]
+
+      if( timings ){
+        // Looks like we have potential bookings
+        // on this day. Better filter them!
+        bookingStart = d;
+        bookingEnd = new Date(d.getTime());
+        bookingEnd.setHours(bookingEnd.getHours() + b.duration);
+        for(var j=0; j < timings.length; j++){
+          if(timings[j] >= bookingStart && timings[j] <= bookingEnd){
+            // Booking conflict. Remove the item from the list
+            // of available timings
+            timings.splice(j, 1);
+          }
+        }
+      }
+
+      if(b.recurring_days > 0){
+        d.setDate(d.getDate() + b.recurring_days);
+      }else{
+        // This booking does not recur. Exit the loop
+        break;
+      }
+    }
+
+  }
+
+  return availableTimings;
 }
 
 connection.connect(function(err){
@@ -81,7 +136,7 @@ router.get('/availability/:duration', function(req, res){
     if(err){
       res.json(null);
     }else{
-      var availableTimings = createFullAvailabilityObject(booking_duration);
+      var availableTimings = filterBookingConflicts(createFullAvailabilityObject(booking_duration), rows);
             
       res.json({'availableTimings': availableTimings});
     }
