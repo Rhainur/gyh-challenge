@@ -23,7 +23,6 @@ var config = {
 function getDurationStart(){
   var d = new Date(); 
   d.setHours(0,0,0,0);
-  console.log(d);
   return d;
 }
 
@@ -32,8 +31,7 @@ function getDurationStart(){
 
 function getDurationEnd(){
   s = new Date();
-  d = new Date(s.getFullYear(), s.getMonth(), config.durationLength, 23, 59, 59);
-  console.log(d);
+  d = new Date(s.getFullYear(), s.getMonth(), s.getDate() + config.durationLength, 23, 59, 59);
   return d;
 }
 
@@ -126,9 +124,10 @@ function filterBookingConflicts(availableTimings, bookings, requested_booking_re
         bookingEnd = new Date(d.getTime());
         bookingEnd.setHours(bookingEnd.getHours() + b.duration);
         for(var j=0; j < timings.length; j++){
-          if(timings[j] >= bookingStart && timings[j] <= bookingEnd){
+          if(timings[j] >= bookingStart && timings[j] < bookingEnd){
             // Booking conflict. 
             availableTimings = removeAvailableTimeWithRecurrence(availableTimings, timings[j], requested_booking_recurrence);
+            j--; // We're removing timings[j] so the counter needs to be reduced
           }
         }
       }
@@ -178,7 +177,6 @@ function removeAvailableTimeWithRecurrence(availableTimings, timingToRemove, boo
   // If the booking does not recur, then d = timingToRemove
   // and the loop will only execute once
   while(d <= timingToRemove){
-    console.log("test");
     dateKey = d.toISOString().substr(0, 10);
     timings = null;
     if(availableTimings[dateKey]){
@@ -258,6 +256,37 @@ router.get('/availability/:duration/:recurrence', function(req, res){
       res.json({'availableTimings': availableTimings});
     }
   });
+});
+
+router.post('/book/:start/:duration/:recurrence', function(req, res){
+  var booking_start = new Date(req.params.start);
+  // Enforce booking start > duration start
+  if(booking_start < getDurationStart()){
+    booking_start = getDurationStart();
+  }
+
+  var booking_duration = parseInt(req.params.duration);
+  // Enforce minimum duration of 1 hour
+  if(booking_duration === NaN || booking_duration < 1){
+    booking_duration = 1;
+  }
+
+  var booking_recurrence = parseInt(req.params.recurrence);
+  // Enforce default recurrence of never
+  if(booking_recurrence === NaN || booking_recurrence < 0){
+    booking_recurrence = 0;
+  }
+
+  var sql = "INSERT INTO bookings (start, duration, recurring_days) VALUES (?, ?, ?);"
+  connection.query(mysql.format(sql, [booking_start, booking_duration, booking_recurrence]), function(err){
+    if(err){
+      console.error("Failed to insert" + err.stack);
+      res.status(500);
+      res.json({result: 'Error'});
+    }else{
+      res.json({result: 'Success'});
+    }
+  })
 });
 
 app.use('/api', router);
