@@ -17,9 +17,14 @@ var config = {
   workStopHour: 17 // Any booking must end by this hour
 };
 
-// Returns an object representing all possible timings 
-// for the current month where a booking could potentially
-// start. Booking length is stored in session_duration
+/*  Returns an object representing all possible timings 
+    for the current month where a booking could potentially
+    start. Booking length is stored in session_duration
+    Output is an object with the keys being
+    date strings of the form YYYY-MM-DD and the values
+    being an object with a human readable date string
+    and an array of available timings
+*/
 function createFullAvailabilityObject(booking_duration){
   var result = {};
 
