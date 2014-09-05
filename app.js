@@ -23,18 +23,18 @@ var config = {
 function createFullAvailabilityObject(booking_duration){
   var result = {};
 
-  var durationStart = new Date();
+  var durationStart = new Date(); durationStart.setHours(0,0,0,0);
   var durationEnd = new Date(durationStart.getFullYear(), durationStart.getMonth(), config.durationLength, 23, 59, 59);
 
   var i = durationStart;
   while(i < durationEnd){
     dateKey = i.toISOString().substr(0, 10);
-    result[dateKey] = [];
+    result[dateKey] = { date: i.toDateString(), timings: [] };
     endOfWork = new Date(i.getTime()).setHours(config.workStopHour)
     
     i.setHours(config.workStartHour);
     while((endOfWork - i) >= (60 * 60 * 1000 * booking_duration)){
-      result[dateKey].push(new Date(i.getTime()));
+      result[dateKey].timings.push(new Date(i.getTime()));
       i.setMinutes(i.getMinutes() + 30);
     }
     
@@ -45,7 +45,7 @@ function createFullAvailabilityObject(booking_duration){
 }
 
 function filterBookingConflicts(availableTimings, bookings){
-  var durationStart = new Date();
+  var durationStart = new Date(); durationStart.setHours(0,0,0,0);
   var durationEnd = new Date(durationStart.getFullYear(), durationStart.getMonth(), config.durationLength, 23, 59, 59);
 
   for(var i=0; i < bookings.length; i++){
@@ -67,7 +67,10 @@ function filterBookingConflicts(availableTimings, bookings){
     while(d < durationEnd){
 
       dateKey = d.toISOString().substr(0, 10);
-      timings = availableTimings[dateKey]
+      timings = null;
+      if(availableTimings[dateKey]){
+        timings = availableTimings[dateKey].timings;
+      }
 
       if( timings ){
         // Looks like we have potential bookings
