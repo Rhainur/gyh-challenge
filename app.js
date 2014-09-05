@@ -8,6 +8,41 @@ var connection = mysql.createConnection({
   database : 'gyhtest'
 });
 
+var config = {
+  /*
+  Store the working hours for the cleaning sessions. 
+  */
+  workStartHour: 9,
+  workStopHour: 17 // Any booking must end by this hour
+};
+
+// Returns an object representing all possible timings 
+// for the current month where a booking could potentially
+// start. Booking length is stored in session_duration
+function createFullAvailabilityObject(booking_duration){
+  var result = {};
+
+  var currentDate = new Date();
+  var startOfMonth = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), 1));
+  var endOfMonth = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59));
+
+  var i = startOfMonth;
+  while(i < endOfMonth){
+    dateKey = i.toISOString().substr(0, 10);
+    result[dateKey] = [];
+    
+    i.setHours(config.workStartHour);
+    while((i.getHours() + booking_duration) <= config.workStopHour){
+      result[dateKey].push(new Date(i.getTime()));
+      i.setMinutes(i.getMinutes() + 30);
+    }
+    
+    i.setDate(i.getDate() + 1);
+  }
+
+  return result;
+}
+
 connection.connect(function(err){
   if(err){
     console.error('Error while attempting to connect: ' + err.stack);
@@ -40,16 +75,15 @@ var router = express.Router();
 app.use(express.static(__dirname + '/public'));
 
 // Routes
-router.post('/availability', function(req, res){
+router.get('/availability/:duration', function(req, res){
+  var booking_duration = parseInt(req.params.duration) || 1;
   connection.query("SELECT * FROM bookings WHERE active = true;", function(err, rows, fields){
     if(err){
       res.json(null);
     }else{
-      var currentDate = new Date();
-      var firstDayOfMonth = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), 1));
-      var lastDayOfMonth = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth() + 1, 0));
-      
-      availableTimings = [];
+
+      var availableTimings = createFullAvailabilityObject(booking_duration);
+            
       res.json({'availableTimings': availableTimings});
     }
   });

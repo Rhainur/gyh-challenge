@@ -19,3 +19,8 @@ complicated with information pertaining to location and possibly more complicate
 systems (i.e "last Sunday of each month"). Hopefully this simple model should cover the
 requirements of the challenge.
 
+Availability checking works by first generating a list of all possible start times for the
+session while ignoring conflicts i.e merely looking at working hours and session duration,
+and then pulling booking information from the database and using it to eliminate times, and
+finally returning the filtered timings.
+
