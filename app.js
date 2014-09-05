@@ -21,6 +21,8 @@ var tableSetupQuery = "CREATE TABLE IF NOT EXISTS `bookings` ( \
   id INT NOT NULL AUTO_INCREMENT, \
   start DATETIME NOT NULL, \
   end DATETIME NOT NULL, \
+  recurring_days TINYINT UNSIGNED DEFAULT 0, \
+  active BOOLEAN DEFAULT true, \
   PRIMARY KEY ( id ) \
   );";
 
