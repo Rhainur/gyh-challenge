@@ -33,11 +33,15 @@ function createFullAvailabilityObject(booking_duration){
 
   var i = durationStart;
   while(i < durationEnd){
+    i.setHours(config.workStartHour,0,0,0);
+    
     dateKey = i.toISOString().substr(0, 10);
     result[dateKey] = { date: i.toDateString(), timings: [] };
     endOfWork = new Date(i.getTime()).setHours(config.workStopHour)
     
-    i.setHours(config.workStartHour);
+
+    // If the session can be finished before the end of the work
+    // day, add the timing on to our array of available timings
     while((endOfWork - i) >= (60 * 60 * 1000 * booking_duration)){
       result[dateKey].timings.push(new Date(i.getTime()));
       i.setMinutes(i.getMinutes() + 30);
@@ -138,7 +142,11 @@ app.use(express.static(__dirname + '/public'));
 
 // Routes
 router.get('/availability/:duration', function(req, res){
-  var booking_duration = parseInt(req.params.duration) || 1;
+  var booking_duration = parseInt(req.params.duration);
+  // Enforce minimum duration of 1 hour
+  if(booking_duration === NaN || booking_duration < 1){
+    booking_duration = 1;
+  }
   connection.query("SELECT * FROM bookings WHERE active = true;", function(err, rows, fields){
     if(err){
       res.json(null);
