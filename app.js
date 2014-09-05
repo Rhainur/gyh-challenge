@@ -34,10 +34,28 @@ connection.query(tableSetupQuery, function(err){
 });
 
 var app = express();
+var router = express.Router();
 
 // Static files
 app.use(express.static(__dirname + '/public'));
 
+// Routes
+router.post('/availability', function(req, res){
+  connection.query("SELECT * FROM bookings WHERE active = true;", function(err, rows, fields){
+    if(err){
+      res.json(null);
+    }else{
+      var currentDate = new Date();
+      var firstDayOfMonth = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), 1));
+      var lastDayOfMonth = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth() + 1, 0));
+      
+      availableTimings = [];
+      res.json({'availableTimings': availableTimings});
+    }
+  });
+});
+
+app.use('/api', router);
 
 // Start listening for requests
 var server = app.listen(process.env.PORT || 3000, function() {

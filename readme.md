@@ -5,7 +5,9 @@ This document will serve as a guide to my thoughts while working on this challen
 
 Since the challenge required the code to be in a single Node module, I've decided 
 to include the table setup code as a simple query right at the top. Ordinarily, this
-would be better handled via some sort of migration system.
+would be better handled via some sort of migration system, but for this app I'll be
+focusing on the basic functionality rather than working on enterprise-grade
+production readiness :)
 
 The base HTML file is served up via Express's built in static content capabilities.
 
