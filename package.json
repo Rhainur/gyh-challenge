@@ -1,0 +1,10 @@
+{
+  "name": "gyh-challenge",
+  "description": "gyh-challenge",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "express": "4.x",
+    "mysql": "2.x"
+  }
+}
