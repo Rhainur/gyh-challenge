@@ -17,6 +17,26 @@ var config = {
   workStopHour: 17 // Any booking must end by this hour
 };
 
+// Returns the start of the availability search range
+// By default the start of the current day
+
+function getDurationStart(){
+  var d = new Date(); 
+  d.setHours(0,0,0,0);
+  console.log(d);
+  return d;
+}
+
+// Returns the start of the availability search range
+// By default it returns today + config.durationLength days
+
+function getDurationEnd(){
+  s = new Date();
+  d = new Date(s.getFullYear(), s.getMonth(), config.durationLength, 23, 59, 59);
+  console.log(d);
+  return d;
+}
+
 /*  
     function createFullAvailabilityObject
     Takes the duration of the requested booking
@@ -34,8 +54,8 @@ var config = {
 function createFullAvailabilityObject(booking_duration){
   var result = {};
 
-  var durationStart = new Date(); durationStart.setHours(0,0,0,0);
-  var durationEnd = new Date(durationStart.getFullYear(), durationStart.getMonth(), config.durationLength, 23, 59, 59);
+  var durationStart = getDurationStart();
+  var durationEnd = getDurationEnd();
 
   var i = durationStart;
   while(i < durationEnd){
@@ -72,9 +92,8 @@ function createFullAvailabilityObject(booking_duration){
 */
 
 function filterBookingConflicts(availableTimings, bookings, requested_booking_recurrence){
-  console.log("Recur", requested_booking_recurrence);
-  var durationStart = new Date(); durationStart.setHours(0,0,0,0);
-  var durationEnd = new Date(durationStart.getFullYear(), durationStart.getMonth(), config.durationLength, 23, 59, 59);
+  var durationStart = getDurationStart();
+  var durationEnd = getDurationEnd();
 
   for(var i=0; i < bookings.length; i++){
     var b = bookings[i];
@@ -138,7 +157,7 @@ function filterBookingConflicts(availableTimings, bookings, requested_booking_re
 */
 
 function removeAvailableTimeWithRecurrence(availableTimings, timingToRemove, booking_recurrence){
-  var durationStart = new Date(); durationStart.setHours(0,0,0,0);
+  var durationStart = getDurationStart();
 
   var d = new Date(timingToRemove.getTime());
   // If the requested booking is going to recur, we
@@ -159,6 +178,7 @@ function removeAvailableTimeWithRecurrence(availableTimings, timingToRemove, boo
   // If the booking does not recur, then d = timingToRemove
   // and the loop will only execute once
   while(d <= timingToRemove){
+    console.log("test");
     dateKey = d.toISOString().substr(0, 10);
     timings = null;
     if(availableTimings[dateKey]){
@@ -172,8 +192,13 @@ function removeAvailableTimeWithRecurrence(availableTimings, timingToRemove, boo
           timings.splice(j, 1);
         }
       }
-    }      
-    d.setDate(d.getDate() + booking_recurrence);
+    }
+
+    if(booking_recurrence === 0){
+      break;
+    }else{
+      d.setDate(d.getDate() + booking_recurrence);
+    }
   }
 
   return availableTimings;
@@ -229,7 +254,7 @@ router.get('/availability/:duration/:recurrence', function(req, res){
       res.json(null);
     }else{
       var availableTimings = filterBookingConflicts(createFullAvailabilityObject(booking_duration), rows, booking_recurrence);
-            
+
       res.json({'availableTimings': availableTimings});
     }
   });

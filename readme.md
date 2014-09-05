@@ -25,5 +25,6 @@ and then pulling booking information from the database and using it to eliminate
 finally returning the filtered timings. Currently, the system checks availability up to 90
 days into the future, but this could easily be tweaked via the config, and an inspection of
 the code will show that we can just as easily accept an end date via the API parameters and
-use that as our upper limit.
+use that as our upper limit. getDurationStart() and getDuration() end define the limits of our
+scanning.
 
